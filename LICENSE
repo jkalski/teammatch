@@ -1,0 +1,5 @@
+@"
+MIT License
+
+Copyright (c) 2026 TeamMatch AI
+"@ | Out-File -Encoding utf8 LICENSE
