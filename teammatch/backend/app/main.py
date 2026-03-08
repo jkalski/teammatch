@@ -1,6 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.courses import router as courses_router
+from app.routes.students import router as students_router
+
+# Import all models so SQLAlchemy knows about them
+from app.models import course, student, team, matchrun, checkin, contribution, notification
 
 app = FastAPI(
     title="TeamMatch API",
@@ -16,6 +20,7 @@ app.add_middleware(
 )
 
 app.include_router(courses_router)
+app.include_router(students_router)
 
 @app.get("/")
 def root():

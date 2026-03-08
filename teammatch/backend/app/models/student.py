@@ -1,5 +1,6 @@
-from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, ARRAY
+from sqlalchemy import Column, String, DateTime, ForeignKey
 from sqlalchemy.sql import func
+from sqlalchemy.dialects.postgresql import ARRAY
 from app.core.database import Base
 import uuid
 
@@ -14,9 +15,9 @@ class Student(Base):
     
     # Survey responses
     skills = Column(ARRAY(String), nullable=True)
-    experience_level = Column(String, nullable=True)  # beginner / intermediate / advanced
-    availability = Column(ARRAY(String), nullable=True)  # e.g. ["Mon 9am", "Wed 3pm"]
-    leadership_preference = Column(String, nullable=True)  # leader / contributor / flexible
+    experience_level = Column(String, nullable=True)
+    availability = Column(ARRAY(String), nullable=True)
+    leadership_preference = Column(String, nullable=True)
     role_preference = Column(String, nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
