@@ -1,12 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function JoinPage() {
   const [form, setForm] = useState({
     team_code: '',
     student_id: '',
   });
+
+  useEffect(() => {
+    const studentId = localStorage.getItem('tm_student_id') || '';
+    setForm(p => ({ ...p, student_id: studentId }));
+  }, []);
   const [joined, setJoined] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

@@ -33,5 +33,8 @@ dist/
 # VS Code
 .vscode/
 
+# Claude Code
+.claude/
+
 # Python test cache
 .pytest_cache/

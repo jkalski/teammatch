@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const SKILLS = ['Python', 'JavaScript', 'React', 'Node.js', 'SQL', 'Java', 'C++', 'Machine Learning', 'DevOps', 'UI/UX'];
 const AVAILABILITY = ['Mon AM', 'Mon PM', 'Tue AM', 'Tue PM', 'Wed AM', 'Wed PM', 'Thu AM', 'Thu PM', 'Fri AM', 'Fri PM'];
@@ -17,8 +17,15 @@ export default function SurveyPage() {
     availability: [] as string[],
   });
   const [submitted, setSubmitted] = useState(false);
+  const [studentId, setStudentId] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    const name = localStorage.getItem('tm_name') || '';
+    const email = localStorage.getItem('tm_email') || '';
+    setForm(p => ({ ...p, name, email }));
+  }, []);
 
   const toggleItem = (field: 'skills' | 'availability', value: string) => {
     setForm(prev => ({
@@ -46,6 +53,9 @@ export default function SurveyPage() {
         body: JSON.stringify(form),
       });
       if (!res.ok) throw new Error('Submission failed');
+      const data = await res.json();
+      localStorage.setItem('tm_student_id', data.id);
+      setStudentId(data.id);
       setSubmitted(true);
     } catch (e) {
       setError('Something went wrong. Please try again.');
@@ -56,13 +66,23 @@ export default function SurveyPage() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
-        <div className="text-center">
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center px-4">
+        <div className="text-center max-w-md">
           <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-emerald-600 text-2xl">✓</span>
           </div>
           <h2 className="text-3xl font-bold text-stone-800 mb-2">You're in!</h2>
-          <p className="text-stone-500">Your profile has been submitted. Your instructor will assign teams soon.</p>
+          <p className="text-stone-500 mb-6">Your profile has been submitted. Use your Student ID to join a course.</p>
+          <div className="bg-white border border-stone-200 rounded-xl p-4 mb-6">
+            <p className="text-xs font-mono text-stone-400 uppercase tracking-widest mb-1">Your Student ID</p>
+            <p className="font-mono text-sm text-emerald-700 break-all">{studentId}</p>
+          </div>
+          <a
+            href="/join"
+            className="inline-block px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold rounded-lg transition text-sm"
+          >
+            Join a Course →
+          </a>
         </div>
       </div>
     );
