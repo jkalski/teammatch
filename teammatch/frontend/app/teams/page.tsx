@@ -25,11 +25,28 @@ interface Student {
   leadership_preference: string;
 }
 
+interface Milestone {
+  id: string;
+  title: string;
+  due_date: string | null;
+  completed: boolean;
+}
+
+interface Project {
+  id: string;
+  name: string;
+  description: string | null;
+  deadline: string | null;
+  status: string;
+  milestones: Milestone[];
+}
+
 export default function TeamsPage() {
   const [courseId, setCourseId] = useState('');
   const [inputId, setInputId] = useState('');
   const [teams, setTeams] = useState<Team[]>([]);
   const [studentsByTeam, setStudentsByTeam] = useState<Record<string, Student[]>>({});
+  const [projectsByTeam, setProjectsByTeam] = useState<Record<string, Project[]>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
@@ -58,6 +75,16 @@ export default function TeamsPage() {
         })
       );
       setStudentsByTeam(studentMap);
+
+      // Fetch projects for each team
+      const projectMap: Record<string, Project[]> = {};
+      await Promise.all(
+        data.map(async (team: Team) => {
+          const pRes = await fetch(`http://localhost:8000/projects/team/${team.id}`);
+          projectMap[team.id] = await pRes.json();
+        })
+      );
+      setProjectsByTeam(projectMap);
     } catch (e) {
       setError('Could not load teams. Check your Course ID and try again.');
     } finally {
@@ -225,6 +252,51 @@ export default function TeamsPage() {
                     <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-4">
                       <p className="text-xs font-mono text-emerald-600 uppercase tracking-widest mb-2">Why this team?</p>
                       <p className="text-sm text-stone-600">{team.explanation}</p>
+                    </div>
+                  )}
+
+                  {/* Assigned Projects */}
+                  {projectsByTeam[team.id]?.length > 0 && (
+                    <div>
+                      <p className="text-xs font-mono text-stone-400 uppercase tracking-widest mb-3">Assigned Project</p>
+                      {projectsByTeam[team.id].map(project => (
+                        <div key={project.id} className="bg-white border border-stone-200 rounded-lg p-4 space-y-3">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="font-semibold text-stone-800">{project.name}</p>
+                              {project.description && (
+                                <p className="text-sm text-stone-500 mt-0.5">{project.description}</p>
+                              )}
+                            </div>
+                            {project.deadline && (
+                              <span className="text-xs text-stone-400 whitespace-nowrap ml-4">
+                                Due {new Date(project.deadline).toLocaleDateString()}
+                              </span>
+                            )}
+                          </div>
+                          {project.milestones.length > 0 && (
+                            <div className="space-y-1.5 pt-2 border-t border-stone-100">
+                              {project.milestones.map(m => (
+                                <div key={m.id} className="flex items-center gap-2">
+                                  <span className={`w-4 h-4 rounded border flex items-center justify-center text-xs flex-shrink-0 ${
+                                    m.completed ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-stone-300'
+                                  }`}>
+                                    {m.completed && '✓'}
+                                  </span>
+                                  <span className={`text-sm ${m.completed ? 'line-through text-stone-400' : 'text-stone-700'}`}>
+                                    {m.title}
+                                  </span>
+                                  {m.due_date && (
+                                    <span className="text-xs text-stone-400 ml-auto">
+                                      {new Date(m.due_date).toLocaleDateString()}
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   )}
 

@@ -13,6 +13,7 @@ from app.models.matchrun import MatchRun
 from app.models.checkin import CheckIn
 from app.models.contribution import Contribution
 from app.models.notification import Notification
+from app.models.project import Project, Milestone
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)

@@ -103,6 +103,8 @@ export default function DashboardPage() {
           <span className="text-xs font-mono text-emerald-600 tracking-widest uppercase">TeamMatch</span>
           <span className="text-stone-300">|</span>
           <span className="text-sm text-stone-500">Instructor Dashboard</span>
+          <span className="text-stone-300">|</span>
+          <a href="/projects" className="text-sm text-stone-500 hover:text-emerald-600 transition">Projects</a>
         </div>
         <button
           onClick={() => setShowCreateForm(true)}
