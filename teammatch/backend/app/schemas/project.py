@@ -9,6 +9,7 @@ class MilestoneCreate(BaseModel):
 
 class MilestoneUpdate(BaseModel):
     completed: bool
+    due_date: Optional[datetime] = None
 
 class MilestoneResponse(BaseModel):
     id: str

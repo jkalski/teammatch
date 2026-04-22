@@ -26,6 +26,57 @@ interface MatchRun {
   created_at: string;
 }
 
+function CourseRow({ course, selected, pinned, onSelect, onPin, onDelete, confirmDelete, onConfirmDelete, onCancelDelete }: {
+  course: Course; selected: boolean; pinned: boolean;
+  onSelect: () => void; onPin: () => void; onDelete: () => void;
+  confirmDelete: boolean; onConfirmDelete: () => void; onCancelDelete: () => void;
+}) {
+  return (
+    <div className="mb-1">
+      <div
+        className={`group w-full text-left px-3 py-3 rounded-lg transition flex items-start justify-between cursor-pointer ${
+          selected ? 'bg-emerald-50 border border-emerald-200' : 'hover:bg-stone-50 border border-transparent'
+        }`}
+        onClick={onSelect}
+      >
+        <div className="flex-1 min-w-0">
+          <p className={`text-sm font-medium truncate ${selected ? 'text-emerald-700' : 'text-stone-700'}`}>
+            {course.name}
+          </p>
+          <p className="text-xs text-stone-400 mt-0.5">Code: {course.team_code}</p>
+        </div>
+        <div className="flex items-center gap-1 ml-2 opacity-0 group-hover:opacity-100 transition flex-shrink-0">
+          <button
+            onClick={e => { e.stopPropagation(); onPin(); }}
+            className={`text-sm transition ${pinned ? 'text-amber-400 hover:text-stone-300' : 'text-stone-300 hover:text-amber-400'}`}
+            title={pinned ? 'Unpin' : 'Pin to top'}
+          >
+            {pinned ? '★' : '☆'}
+          </button>
+          <button
+            onClick={e => { e.stopPropagation(); onDelete(); }}
+            className="text-stone-300 hover:text-red-400 transition text-xs"
+            title="Delete course"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      {confirmDelete && (
+        <div className="mx-1 mb-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-xs text-red-700 font-medium mb-1">Delete this course?</p>
+          <p className="text-xs text-red-500 mb-3">This will permanently remove all students, teams, and data in this class.</p>
+          <div className="flex gap-2">
+            <button onClick={onConfirmDelete} className="flex-1 py-1.5 bg-red-500 hover:bg-red-400 text-white text-xs font-medium rounded transition">Delete</button>
+            <button onClick={onCancelDelete} className="flex-1 py-1.5 border border-stone-200 text-stone-600 text-xs rounded hover:bg-stone-50 transition">Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const [view, setView] = useState<'courses' | 'students' | 'matchruns'>('courses');
   const [courses, setCourses] = useState<Course[]>([]);
@@ -35,6 +86,18 @@ export default function DashboardPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newCourse, setNewCourse] = useState({ name: '', instructor_id: 'instructor-001', team_size: 4 });
   const [loading, setLoading] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('tm_pinned_courses') || '[]'); } catch { return []; }
+  });
+
+  const togglePin = (courseId: string) => {
+    setPinnedIds(prev => {
+      const next = prev.includes(courseId) ? prev.filter(id => id !== courseId) : [courseId, ...prev];
+      localStorage.setItem('tm_pinned_courses', JSON.stringify(next));
+      return next;
+    });
+  };
 
   useEffect(() => {
     fetchCourses();
@@ -46,6 +109,14 @@ export default function DashboardPage() {
       fetchMatchRuns(selectedCourse.id);
     }
   }, [selectedCourse]);
+
+  // Poll every 2s while any run is PENDING or RUNNING
+  useEffect(() => {
+    const hasActive = matchRuns.some(r => r.status === 'PENDING' || r.status === 'RUNNING');
+    if (!hasActive || !selectedCourse) return;
+    const timer = setTimeout(() => fetchMatchRuns(selectedCourse.id), 2000);
+    return () => clearTimeout(timer);
+  }, [matchRuns, selectedCourse]);
 
   const fetchCourses = async () => {
     const res = await fetch('http://localhost:8000/courses/');
@@ -94,18 +165,19 @@ export default function DashboardPage() {
     setLoading(false);
   };
 
+  const deleteCourse = async (courseId: string) => {
+    await fetch(`http://localhost:8000/courses/${courseId}`, { method: 'DELETE' });
+    const remaining = courses.filter(c => c.id !== courseId);
+    setCourses(remaining);
+    setSelectedCourse(remaining.length > 0 ? remaining[0] : null);
+    setConfirmDeleteId(null);
+  };
+
   return (
     <div className="min-h-screen bg-stone-50">
 
-      {/* Top Nav */}
-      <div className="bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-xs font-mono text-emerald-600 tracking-widest uppercase">TeamMatch</span>
-          <span className="text-stone-300">|</span>
-          <span className="text-sm text-stone-500">Instructor Dashboard</span>
-          <span className="text-stone-300">|</span>
-          <a href="/projects" className="text-sm text-stone-500 hover:text-emerald-600 transition">Projects</a>
-        </div>
+      <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200 bg-white">
+        <span className="text-sm text-stone-500 font-medium">Instructor Dashboard</span>
         <button
           onClick={() => setShowCreateForm(true)}
           className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-medium rounded-lg transition"
@@ -114,31 +186,36 @@ export default function DashboardPage() {
         </button>
       </div>
 
-      <div className="flex h-[calc(100vh-57px)]">
+      <div className="flex h-[calc(100vh-113px)]">
 
         {/* Sidebar — Course List */}
         <div className="w-64 bg-white border-r border-stone-200 overflow-y-auto">
           <div className="p-4">
-            <p className="text-xs font-mono text-stone-400 tracking-widest uppercase mb-3">Courses</p>
-            {courses.length === 0 && (
-              <p className="text-sm text-stone-400">No courses yet.</p>
+            {courses.length === 0 && <p className="text-sm text-stone-400">No courses yet.</p>}
+
+            {/* Pinned */}
+            {pinnedIds.filter(id => courses.find(c => c.id === id)).length > 0 && (
+              <>
+                <p className="text-xs font-mono text-amber-500 tracking-widest uppercase mb-2">Pinned</p>
+                {pinnedIds.filter(id => courses.find(c => c.id === id)).map(id => {
+                  const course = courses.find(c => c.id === id)!;
+                  return <CourseRow key={course.id} course={course} selected={selectedCourse?.id === course.id} pinned onSelect={() => setSelectedCourse(course)} onPin={() => togglePin(course.id)} onDelete={() => setConfirmDeleteId(course.id)} confirmDelete={confirmDeleteId === course.id} onConfirmDelete={() => deleteCourse(course.id)} onCancelDelete={() => setConfirmDeleteId(null)} />;
+                })}
+                <div className="border-t border-stone-100 my-3" />
+              </>
             )}
-            {courses.map(course => (
-              <button
-                key={course.id}
-                onClick={() => setSelectedCourse(course)}
-                className={`w-full text-left px-3 py-3 rounded-lg mb-1 transition ${
-                  selectedCourse?.id === course.id
-                    ? 'bg-emerald-50 border border-emerald-200'
-                    : 'hover:bg-stone-50'
-                }`}
-              >
-                <p className={`text-sm font-medium ${selectedCourse?.id === course.id ? 'text-emerald-700' : 'text-stone-700'}`}>
-                  {course.name}
-                </p>
-                <p className="text-xs text-stone-400 mt-0.5">Code: {course.team_code}</p>
-              </button>
-            ))}
+
+            {/* Other courses */}
+            {courses.filter(c => !pinnedIds.includes(c.id)).length > 0 && (
+              <>
+                {pinnedIds.filter(id => courses.find(c => c.id === id)).length > 0 && (
+                  <p className="text-xs font-mono text-stone-400 tracking-widest uppercase mb-2">Other</p>
+                )}
+                {courses.filter(c => !pinnedIds.includes(c.id)).map(course => (
+                  <CourseRow key={course.id} course={course} selected={selectedCourse?.id === course.id} pinned={false} onSelect={() => setSelectedCourse(course)} onPin={() => togglePin(course.id)} onDelete={() => setConfirmDeleteId(course.id)} confirmDelete={confirmDeleteId === course.id} onConfirmDelete={() => deleteCourse(course.id)} onCancelDelete={() => setConfirmDeleteId(null)} />
+                ))}
+              </>
+            )}
           </div>
         </div>
 

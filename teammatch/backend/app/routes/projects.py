@@ -76,6 +76,8 @@ def update_milestone(milestone_id: str, body: MilestoneUpdate, db: Session = Dep
     if not milestone:
         raise HTTPException(status_code=404, detail="Milestone not found")
     milestone.completed = body.completed
+    if body.due_date is not None:
+        milestone.due_date = body.due_date
     db.commit()
     db.refresh(milestone)
     return milestone

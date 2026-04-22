@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface Team {
   id: string;
@@ -41,42 +41,68 @@ interface Project {
   milestones: Milestone[];
 }
 
+interface Course {
+  id: string;
+  name: string;
+  team_code: string;
+  created_at: string;
+}
+
 export default function TeamsPage() {
+  const [courses, setCourses] = useState<Course[]>([]);
   const [courseId, setCourseId] = useState('');
-  const [inputId, setInputId] = useState('');
   const [teams, setTeams] = useState<Team[]>([]);
   const [studentsByTeam, setStudentsByTeam] = useState<Record<string, Student[]>>({});
   const [projectsByTeam, setProjectsByTeam] = useState<Record<string, Project[]>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(null);
 
-  const fetchTeams = async () => {
-    if (!inputId) {
-      setError('Please enter a Course ID.');
-      return;
+  useEffect(() => {
+    const r = localStorage.getItem('tm_role');
+    setRole(r);
+    if (r === 'instructor') {
+      fetch('http://localhost:8000/courses/')
+        .then(res => res.json())
+        .then(data => {
+          const sorted = [...data].sort((a: Course, b: Course) =>
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          );
+          setCourses(sorted);
+          if (sorted.length > 0) loadTeams(sorted[0].id);
+        });
+    } else {
+      const sid = localStorage.getItem('tm_student_id');
+      if (sid) {
+        fetch(`http://localhost:8000/students/${sid}`)
+          .then(res => res.json())
+          .then(student => {
+            if (student.course_id) loadTeams(student.course_id);
+          });
+      }
     }
+  }, []);
+
+  const loadTeams = async (cid: string) => {
     setError('');
     setLoading(true);
+    setCourseId(cid);
     try {
-      const res = await fetch(`http://localhost:8000/teams/course/${inputId}`);
+      const res = await fetch(`http://localhost:8000/teams/course/${cid}`);
       if (!res.ok) throw new Error('Failed to fetch teams');
       const data = await res.json();
       setTeams(data);
-      setCourseId(inputId);
 
-      // Fetch students for each team
+      const allStudentsRes = await fetch(`http://localhost:8000/students/course/${cid}`);
+      const allStudents = await allStudentsRes.json();
+
       const studentMap: Record<string, Student[]> = {};
-      await Promise.all(
-        data.map(async (team: Team) => {
-          const sRes = await fetch(`http://localhost:8000/students/course/${inputId}`);
-          const students = await sRes.json();
-          studentMap[team.id] = students.filter((s: any) => s.team_id === team.id);
-        })
-      );
+      data.forEach((team: Team) => {
+        studentMap[team.id] = allStudents.filter((s: any) => s.team_id === team.id);
+      });
       setStudentsByTeam(studentMap);
 
-      // Fetch projects for each team
       const projectMap: Record<string, Project[]> = {};
       await Promise.all(
         data.map(async (team: Team) => {
@@ -86,7 +112,7 @@ export default function TeamsPage() {
       );
       setProjectsByTeam(projectMap);
     } catch (e) {
-      setError('Could not load teams. Check your Course ID and try again.');
+      setError('Could not load teams.');
     } finally {
       setLoading(false);
     }
@@ -116,49 +142,50 @@ export default function TeamsPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
 
         {/* Header */}
-        <div className="mb-10">
-          <div className="text-xs font-mono text-emerald-600 tracking-widest uppercase mb-3">TeamMatch</div>
-          <h1 className="text-4xl font-bold text-stone-800 mb-2">Team Assignments</h1>
-          <p className="text-stone-500">View the generated teams and their balance scores.</p>
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-stone-800 mb-1">Team Assignments</h1>
+          <p className="text-stone-500 text-sm">View the generated teams and their balance scores.</p>
         </div>
 
-        {/* Course ID Input */}
-        <div className="flex gap-3 mb-8">
-          <input
-            className="flex-1 bg-white border border-stone-200 rounded-lg px-4 py-3 text-stone-800 placeholder-stone-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition text-sm"
-            placeholder="Enter Course ID to view teams"
-            value={inputId}
-            onChange={e => setInputId(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && fetchTeams()}
-          />
-          <button
-            onClick={fetchTeams}
-            disabled={loading}
-            className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 disabled:bg-stone-200 text-white text-sm font-medium rounded-lg transition"
-          >
-            {loading ? 'Loading...' : 'Load Teams'}
-          </button>
-        </div>
+        <div className="flex gap-6 items-start">
 
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-6">
-            <p className="text-red-600 text-sm">{error}</p>
-          </div>
-        )}
+          {/* Main content */}
+          <div className="flex-1 min-w-0">
 
-        {/* No teams yet */}
-        {teams.length === 0 && courseId && !loading && (
-          <div className="bg-white rounded-xl border border-stone-200 p-8 text-center">
-            <p className="text-stone-400">No teams found for this course yet.</p>
-            <p className="text-stone-400 text-sm mt-1">Ask your instructor to run the team matching algorithm.</p>
-          </div>
-        )}
+            {/* Course Selector (instructor only) */}
+            {role === 'instructor' && courses.length > 1 && (
+              <div className="flex gap-3 mb-6">
+                <select
+                  className="flex-1 bg-white border border-stone-200 rounded-lg px-4 py-3 text-stone-800 focus:outline-none focus:border-emerald-400 transition text-sm"
+                  value={courseId}
+                  onChange={e => loadTeams(e.target.value)}
+                >
+                  {courses.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
 
-        {/* Teams Grid */}
-        <div className="space-y-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-6">
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+            )}
+
+            {/* No teams yet */}
+            {teams.length === 0 && courseId && !loading && (
+              <div className="bg-white rounded-xl border border-stone-200 p-8 text-center">
+                <p className="text-stone-400">No teams found for this course yet.</p>
+                <p className="text-stone-400 text-sm mt-1">Ask your instructor to run the team matching algorithm.</p>
+              </div>
+            )}
+
+            {/* Teams Grid */}
+            <div className="space-y-4">
           {teams.map(team => (
             <div key={team.id} className="bg-white rounded-xl border border-stone-200 overflow-hidden">
 
@@ -304,7 +331,73 @@ export default function TeamsPage() {
               )}
             </div>
           ))}
-        </div>
+            </div>{/* end teams grid */}
+
+          </div>{/* end main content */}
+
+          {/* Legend sidebar */}
+          <div className="w-56 flex-shrink-0 sticky top-6 space-y-4">
+
+            {/* Experience Level */}
+            <div className="bg-white rounded-xl border border-stone-200 p-4">
+              <p className="text-xs font-mono text-stone-400 uppercase tracking-widest mb-3">Experience</p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs px-2 py-1 rounded-full font-medium bg-emerald-100 text-emerald-700 whitespace-nowrap">advanced</span>
+                  <span className="text-xs text-stone-500">3+ years, owns features end-to-end</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs px-2 py-1 rounded-full font-medium bg-blue-100 text-blue-700 whitespace-nowrap">intermediate</span>
+                  <span className="text-xs text-stone-500">1–2 years, needs occasional guidance</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs px-2 py-1 rounded-full font-medium bg-stone-100 text-stone-600 whitespace-nowrap">beginner</span>
+                  <span className="text-xs text-stone-500">Learning the ropes, needs mentorship</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Leadership */}
+            <div className="bg-white rounded-xl border border-stone-200 p-4">
+              <p className="text-xs font-mono text-stone-400 uppercase tracking-widest mb-3">Leadership</p>
+              <div className="space-y-2">
+                <div>
+                  <span className="text-xs px-2 py-1 rounded-full font-medium bg-stone-100 text-stone-600">leader</span>
+                  <p className="text-xs text-stone-500 mt-1">Drives decisions, coordinates the team</p>
+                </div>
+                <div>
+                  <span className="text-xs px-2 py-1 rounded-full font-medium bg-stone-100 text-stone-600">flexible</span>
+                  <p className="text-xs text-stone-500 mt-1">Can lead or follow depending on the need</p>
+                </div>
+                <div>
+                  <span className="text-xs px-2 py-1 rounded-full font-medium bg-stone-100 text-stone-600">contributor</span>
+                  <p className="text-xs text-stone-500 mt-1">Prefers to focus on execution, not coordination</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Score Guide */}
+            <div className="bg-white rounded-xl border border-stone-200 p-4">
+              <p className="text-xs font-mono text-stone-400 uppercase tracking-widest mb-3">Score Guide</p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 flex-shrink-0" />
+                  <span className="text-xs text-stone-500">80%+ — Well balanced</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400 flex-shrink-0" />
+                  <span className="text-xs text-stone-500">60–79% — Acceptable</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-red-400 flex-shrink-0" />
+                  <span className="text-xs text-stone-500">Below 60% — Review needed</span>
+                </div>
+              </div>
+            </div>
+
+          </div>{/* end legend */}
+
+        </div>{/* end two-column */}
       </div>
     </div>
   );

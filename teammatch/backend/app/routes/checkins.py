@@ -40,4 +40,8 @@ def get_checkins_by_student(student_id: str, db: Session = Depends(get_db)):
 
 @router.get("/team/{team_id}", response_model=list[CheckInResponse])
 def get_checkins_by_team(team_id: str, db: Session = Depends(get_db)):
-    return db.query(CheckIn).filter(CheckIn.team_id == team_id).all()
+    return db.query(CheckIn).filter(CheckIn.team_id == team_id).order_by(CheckIn.created_at.desc()).all()
+
+@router.get("/course/{course_id}", response_model=list[CheckInResponse])
+def get_checkins_by_course(course_id: str, db: Session = Depends(get_db)):
+    return db.query(CheckIn).filter(CheckIn.course_id == course_id).order_by(CheckIn.created_at.desc()).all()
