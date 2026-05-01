@@ -36,3 +36,18 @@ def mark_as_read(notification_id: str, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(notification)
     return notification
+
+@router.patch("/student/{student_id}/read-all", response_model=list[NotificationResponse])
+def mark_all_as_read(student_id: str, db: Session = Depends(get_db)):
+    notifications = db.query(Notification).filter(Notification.student_id == student_id).all()
+    if not notifications:
+        return []
+
+    for notification in notifications:
+        notification.is_read = True
+
+    db.commit()
+    for notification in notifications:
+        db.refresh(notification)
+
+    return notifications

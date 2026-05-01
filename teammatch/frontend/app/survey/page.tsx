@@ -44,6 +44,11 @@ export default function SurveyPage() {
   };
 
   const handleSubmit = async () => {
+    if (!form.name || !form.email || !form.course_id || !form.experience_level || !form.leadership_preference) {
+      setError('Please complete all required fields before submitting.');
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
@@ -52,13 +57,28 @@ export default function SurveyPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
-      if (!res.ok) throw new Error('Submission failed');
+      if (!res.ok) {
+        let message = 'Submission failed';
+        try {
+          const body = await res.json();
+          if (typeof body?.detail === 'string') {
+            message = body.detail;
+          }
+        } catch {
+          // Keep default message if the error body is not JSON.
+        }
+        throw new Error(message);
+      }
       const data = await res.json();
       localStorage.setItem('tm_student_id', data.id);
       setStudentId(data.id);
       setSubmitted(true);
-    } catch (e) {
-      setError('Something went wrong. Please try again.');
+    } catch (e: unknown) {
+      if (e instanceof Error && e.message) {
+        setError(e.message);
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

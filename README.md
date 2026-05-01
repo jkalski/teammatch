@@ -10,6 +10,26 @@ TeamMatch is a cloud-native web application that forms balanced, schedule-compat
 - **Matching Agent:** Python container → Azure Container Instances
 - **CI/CD:** GitHub Actions → Azure
 
+## Requirements
+- **OS:** Linux, macOS, or Windows (WSL recommended on Windows)
+- **Node.js:** 20+
+- **npm:** 10+
+- **Python:** 3.11+
+
+### Backend Setup
+1. `cd teammatch/backend`
+2. `python -m venv .venv`
+3. `source .venv/bin/activate` (Linux/macOS) or `.venv\\Scripts\\activate` (Windows)
+4. `pip install -r requirements.txt`
+
+### Frontend Setup
+1. `cd teammatch/frontend`
+2. `npm install`
+
+### Run Tests
+1. `cd teammatch/backend`
+2. `pytest`
+
 ## Repo Structure
 - `/frontend` - Next.js web application
 - `/backend` - FastAPI REST API

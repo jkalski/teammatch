@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey
+from sqlalchemy import Column, String, DateTime, ForeignKey, JSON
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import ARRAY
 from app.core.database import Base
@@ -14,9 +14,9 @@ class Student(Base):
     team_id = Column(String, ForeignKey("teams.id"), nullable=True)
     
     # Survey responses
-    skills = Column(ARRAY(String), nullable=True)
+    skills = Column(ARRAY(String).with_variant(JSON, "sqlite"), nullable=True)
     experience_level = Column(String, nullable=True)
-    availability = Column(ARRAY(String), nullable=True)
+    availability = Column(ARRAY(String).with_variant(JSON, "sqlite"), nullable=True)
     leadership_preference = Column(String, nullable=True)
     role_preference = Column(String, nullable=True)
 

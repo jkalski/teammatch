@@ -52,6 +52,17 @@ export default function NotificationsPage() {
     }
   };
 
+  const markAllAsRead = async () => {
+    if (!studentId || unreadCount === 0) return;
+    try {
+      const res = await fetch(`http://localhost:8000/notifications/student/${studentId}/read-all`, { method: 'PATCH' });
+      if (!res.ok) throw new Error('Failed to mark all as read');
+      setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    } catch (e) {
+      setError('Could not mark all notifications as read. Please try again.');
+    }
+  };
+
   const typeConfig = (type: string) => {
     switch (type) {
       case 'LOW_CONTRIBUTION':
@@ -104,6 +115,18 @@ export default function NotificationsPage() {
             {loading ? 'Loading...' : 'Load'}
           </button>
         </div>
+
+        {notifications.length > 0 && (
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={markAllAsRead}
+              disabled={unreadCount === 0}
+              className="text-xs text-stone-500 hover:text-stone-700 disabled:text-stone-300 border border-stone-200 disabled:border-stone-100 px-3 py-1.5 rounded-md transition"
+            >
+              Mark all as read
+            </button>
+          </div>
+        )}
 
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg px-4 py-3 mb-6">
