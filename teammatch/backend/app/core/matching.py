@@ -127,19 +127,10 @@ def run_matching(run_id: str, course_id: str, team_size: int, _db: Session):
             db.commit()
             return
 
-        # Clear old team assignments for this course's students
-        for s in students:
-            s.team_id = None
-        db.commit()
-
-        # Delete old teams from previous runs for this course
-        old_teams = db.query(Team).filter(Team.course_id == course_id).all()
-        for t in old_teams:
-            db.delete(t)
-        db.commit()
-
         team_groups = _form_teams(students, team_size)
 
+        # Build all new teams in memory before touching the DB
+        new_teams = []
         for i, members in enumerate(team_groups):
             scores = _score_team(members)
             team = Team(
@@ -154,15 +145,25 @@ def run_matching(run_id: str, course_id: str, team_size: int, _db: Session):
                 overall_score=scores["overall_score"],
                 explanation=_explanation(scores, members),
             )
+            new_teams.append((team, members))
+
+        # All preparation succeeded — now do destructive writes in one transaction
+        for s in students:
+            s.team_id = None
+        old_teams = db.query(Team).filter(Team.course_id == course_id).all()
+        for t in old_teams:
+            db.delete(t)
+        db.flush()
+
+        for team, members in new_teams:
             db.add(team)
             db.flush()
-
             for student in members:
                 student.team_id = team.id
 
         run.status = "COMPLETED"
         run.completed_at = func.now()
-        run.total_teams = str(len(team_groups))
+        run.total_teams = str(len(new_teams))
         db.commit()
 
     except Exception as e:

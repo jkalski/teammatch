@@ -5,10 +5,14 @@ from app.models.checkin import CheckIn
 from app.schemas.checkin import CheckInCreate, CheckInResponse
 import uuid
 
+# All routes in this file are prefixed with /checkins
 router = APIRouter(prefix="/checkins", tags=["checkins"])
 
+
+# POST /checkins/ — student submits a weekly check-in
 @router.post("/", response_model=CheckInResponse)
 def create_checkin(checkin: CheckInCreate, db: Session = Depends(get_db)):
+    # Generate a unique ID and map all incoming fields to the database model
     new_checkin = CheckIn(
         id=str(uuid.uuid4()),
         student_id=checkin.student_id,
@@ -29,19 +33,26 @@ def create_checkin(checkin: CheckInCreate, db: Session = Depends(get_db)):
         peer_shoutout=checkin.peer_shoutout,
         week_number=checkin.week_number
     )
+    # Save to the database and return the saved record
     db.add(new_checkin)
     db.commit()
     db.refresh(new_checkin)
     return new_checkin
 
+
+# GET /checkins/student/{student_id} — fetch all check-ins for a specific student
 @router.get("/student/{student_id}", response_model=list[CheckInResponse])
 def get_checkins_by_student(student_id: str, db: Session = Depends(get_db)):
     return db.query(CheckIn).filter(CheckIn.student_id == student_id).all()
 
+
+# GET /checkins/team/{team_id} — fetch all check-ins for a team, newest first
 @router.get("/team/{team_id}", response_model=list[CheckInResponse])
 def get_checkins_by_team(team_id: str, db: Session = Depends(get_db)):
     return db.query(CheckIn).filter(CheckIn.team_id == team_id).order_by(CheckIn.created_at.desc()).all()
 
+
+# GET /checkins/course/{course_id} — fetch all check-ins across an entire course, newest first
 @router.get("/course/{course_id}", response_model=list[CheckInResponse])
 def get_checkins_by_course(course_id: str, db: Session = Depends(get_db)):
     return db.query(CheckIn).filter(CheckIn.course_id == course_id).order_by(CheckIn.created_at.desc()).all()
