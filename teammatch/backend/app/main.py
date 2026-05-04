@@ -15,7 +15,7 @@ from app.models import course, student, team, matchrun, checkin, contribution, n
 from app.models.project import Project, Milestone
 from app.models.matchrun import MatchRun
 from app.models.course import Course
-from app.core.database import SessionLocal
+from app.core.database import SessionLocal, Base, engine
 from app.core.matching import run_matching
 import threading
 
@@ -43,6 +43,7 @@ def _recover_stuck_runs():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    Base.metadata.create_all(bind=engine)
     _recover_stuck_runs()
     yield
 
