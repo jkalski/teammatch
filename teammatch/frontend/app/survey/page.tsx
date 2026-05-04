@@ -47,7 +47,7 @@ export default function SurveyPage() {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('http://localhost:8000/students/', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/students/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),

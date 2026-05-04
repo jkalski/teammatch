@@ -27,7 +27,7 @@ export default function JoinPage() {
     setLoading(true);
     try {
       // Look up student and verify they exist
-      const res = await fetch(`http://localhost:8000/students/${form.student_id}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/students/${form.student_id}`);
       if (!res.ok) {
         setError('Student ID not found. Please submit your profile first.');
         return;

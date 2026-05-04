@@ -63,7 +63,7 @@ export default function TeamsPage() {
     const r = localStorage.getItem('tm_role');
     setRole(r);
     if (r === 'instructor') {
-      fetch('http://localhost:8000/courses/')
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/`)
         .then(res => res.json())
         .then(data => {
           const sorted = [...data].sort((a: Course, b: Course) =>
@@ -75,7 +75,7 @@ export default function TeamsPage() {
     } else {
       const sid = localStorage.getItem('tm_student_id');
       if (sid) {
-        fetch(`http://localhost:8000/students/${sid}`)
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/students/${sid}`)
           .then(res => res.json())
           .then(student => {
             if (student.course_id) loadTeams(student.course_id);
@@ -89,12 +89,12 @@ export default function TeamsPage() {
     setLoading(true);
     setCourseId(cid);
     try {
-      const res = await fetch(`http://localhost:8000/teams/course/${cid}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/teams/course/${cid}`);
       if (!res.ok) throw new Error('Failed to fetch teams');
       const data = await res.json();
       setTeams(data);
 
-      const allStudentsRes = await fetch(`http://localhost:8000/students/course/${cid}`);
+      const allStudentsRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/students/course/${cid}`);
       const allStudents = await allStudentsRes.json();
 
       const studentMap: Record<string, Student[]> = {};
@@ -106,7 +106,7 @@ export default function TeamsPage() {
       const projectMap: Record<string, Project[]> = {};
       await Promise.all(
         data.map(async (team: Team) => {
-          const pRes = await fetch(`http://localhost:8000/projects/team/${team.id}`);
+          const pRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/team/${team.id}`);
           projectMap[team.id] = await pRes.json();
         })
       );

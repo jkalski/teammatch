@@ -119,27 +119,27 @@ export default function DashboardPage() {
   }, [matchRuns, selectedCourse]);
 
   const fetchCourses = async () => {
-    const res = await fetch('http://localhost:8000/courses/');
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/`);
     const data = await res.json();
     setCourses(data);
     if (data.length > 0) setSelectedCourse(data[0]);
   };
 
   const fetchStudents = async (courseId: string) => {
-    const res = await fetch(`http://localhost:8000/students/course/${courseId}`);
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/students/course/${courseId}`);
     const data = await res.json();
     setStudents(data);
   };
 
   const fetchMatchRuns = async (courseId: string) => {
-    const res = await fetch(`http://localhost:8000/matchruns/course/${courseId}`);
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/matchruns/course/${courseId}`);
     const data = await res.json();
     setMatchRuns(data);
   };
 
   const createCourse = async () => {
     setLoading(true);
-    const res = await fetch('http://localhost:8000/courses/', {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newCourse),
@@ -155,7 +155,7 @@ export default function DashboardPage() {
   const triggerMatchRun = async () => {
     if (!selectedCourse) return;
     setLoading(true);
-    const res = await fetch('http://localhost:8000/matchruns/', {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/matchruns/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ course_id: selectedCourse.id }),
@@ -166,7 +166,7 @@ export default function DashboardPage() {
   };
 
   const deleteCourse = async (courseId: string) => {
-    await fetch(`http://localhost:8000/courses/${courseId}`, { method: 'DELETE' });
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/${courseId}`, { method: 'DELETE' });
     const remaining = courses.filter(c => c.id !== courseId);
     setCourses(remaining);
     setSelectedCourse(remaining.length > 0 ? remaining[0] : null);

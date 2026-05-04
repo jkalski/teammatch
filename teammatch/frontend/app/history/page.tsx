@@ -38,7 +38,7 @@ export default function HistoryPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:8000/checkins/student/${inputId}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/checkins/student/${inputId}`);
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
       const sorted = data.sort((a: CheckIn, b: CheckIn) => b.week_number - a.week_number);

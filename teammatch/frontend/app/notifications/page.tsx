@@ -27,7 +27,7 @@ export default function NotificationsPage() {
     setError('');
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:8000/notifications/student/${inputId}`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/student/${inputId}`);
       if (!res.ok) throw new Error('Failed to fetch');
       const data = await res.json();
       setNotifications(data.sort((a: Notification, b: Notification) =>
@@ -43,7 +43,7 @@ export default function NotificationsPage() {
 
   const markAsRead = async (id: string) => {
     try {
-      await fetch(`http://localhost:8000/notifications/${id}/read`, { method: 'PATCH' });
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL}/notifications/${id}/read`, { method: 'PATCH' });
       setNotifications(prev =>
         prev.map(n => n.id === id ? { ...n, is_read: true } : n)
       );

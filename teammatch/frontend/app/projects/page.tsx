@@ -93,7 +93,7 @@ export default function ProjectsPage() {
   const [studentMap, setStudentMap] = useState<Record<string, Student>>({});
 
   useEffect(() => {
-    fetch('http://localhost:8000/courses/')
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/`)
       .then(r => r.json())
       .then(data => {
         const sorted = [...data].sort((a: Course, b: Course) =>
@@ -109,18 +109,18 @@ export default function ProjectsPage() {
     setExpandedMilestone(null);
     setTeamCheckins({});
 
-    fetch(`http://localhost:8000/projects/course/${selectedCourse.id}`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/course/${selectedCourse.id}`)
       .then(r => r.json())
       .then(data => {
         setProjects(data);
         setSelectedProject(data[0] ?? null);
       });
 
-    fetch(`http://localhost:8000/teams/course/${selectedCourse.id}`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/teams/course/${selectedCourse.id}`)
       .then(r => r.json())
       .then(setTeams);
 
-    fetch(`http://localhost:8000/students/course/${selectedCourse.id}`)
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/students/course/${selectedCourse.id}`)
       .then(r => r.json())
       .then((data: Student[]) => {
         const map: Record<string, Student> = {};
@@ -150,7 +150,7 @@ export default function ProjectsPage() {
 
     await Promise.all(
       teams.map(async team => {
-        const res = await fetch(`http://localhost:8000/checkins/team/${team.id}`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/checkins/team/${team.id}`);
         const all: CheckIn[] = await res.json();
 
         const sorted = sortedMilestones(selectedProject?.milestones ?? []);
@@ -187,7 +187,7 @@ export default function ProjectsPage() {
   const createProject = async () => {
     if (!selectedCourse || !newProject.name) return;
     setLoading(true);
-    const res = await fetch('http://localhost:8000/projects/', {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -208,7 +208,7 @@ export default function ProjectsPage() {
   const addMilestone = async () => {
     if (!selectedProject || !newMilestone.title) return;
     setLoading(true);
-    const res = await fetch(`http://localhost:8000/projects/${selectedProject.id}/milestones`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/${selectedProject.id}/milestones`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -227,7 +227,7 @@ export default function ProjectsPage() {
   };
 
   const toggleMilestone = async (milestoneId: string, completed: boolean) => {
-    const res = await fetch(`http://localhost:8000/projects/milestones/${milestoneId}`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/projects/milestones/${milestoneId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ completed }),

@@ -72,7 +72,7 @@ export default function CheckInsPage() {
   const [selected, setSelected] = useState<CheckIn | null>(null);
 
   useEffect(() => {
-    fetch('http://localhost:8000/courses/')
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/`)
       .then(r => r.json())
       .then(data => {
         const sorted = [...data].sort((a: Course, b: Course) =>
@@ -90,9 +90,9 @@ export default function CheckInsPage() {
     setLoading(true);
 
     Promise.all([
-      fetch(`http://localhost:8000/checkins/course/${selectedCourse.id}`).then(r => r.json()),
-      fetch(`http://localhost:8000/teams/course/${selectedCourse.id}`).then(r => r.json()),
-      fetch(`http://localhost:8000/students/course/${selectedCourse.id}`).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/checkins/course/${selectedCourse.id}`).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/teams/course/${selectedCourse.id}`).then(r => r.json()),
+      fetch(`${process.env.NEXT_PUBLIC_API_URL}/students/course/${selectedCourse.id}`).then(r => r.json()),
     ]).then(([cks, tms, stds]) => {
       setCheckins(cks);
       setTeams(tms);
