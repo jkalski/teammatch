@@ -11,6 +11,7 @@ const INSTRUCTOR_LINKS = [
   { href: '/teams', label: 'Teams' },
   { href: '/projects', label: 'Projects' },
   { href: '/checkins', label: 'Check-ins' },
+  { href: '/analytics', label: 'Analytics' },
 ];
 
 const STUDENT_LINKS = [

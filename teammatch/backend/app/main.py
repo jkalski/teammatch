@@ -9,6 +9,7 @@ from app.routes.checkins import router as checkins_router
 from app.routes.contributions import router as contributions_router
 from app.routes.notifications import router as notifications_router
 from app.routes.projects import router as projects_router
+from app.routes.analytics import router as analytics_router
 
 # Import all models so SQLAlchemy knows about them
 from app.models import course, student, team, matchrun, checkin, contribution, notification
@@ -70,6 +71,7 @@ app.include_router(checkins_router)
 app.include_router(contributions_router)
 app.include_router(notifications_router)
 app.include_router(projects_router)
+app.include_router(analytics_router)
 
 @app.get("/")
 def root():
