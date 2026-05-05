@@ -58,6 +58,8 @@ export default function TeamsPage() {
   const [error, setError] = useState('');
   const [expandedTeam, setExpandedTeam] = useState<string | null>(null);
   const [role, setRole] = useState<string | null>(null);
+  const [analyzingTeam, setAnalyzingTeam] = useState<string | null>(null);
+  const [analysisResults, setAnalysisResults] = useState<Record<string, string>>({});
 
   useEffect(() => {
     const r = localStorage.getItem('tm_role');
@@ -138,6 +140,35 @@ export default function TeamsPage() {
         <span className={`text-xs font-mono ${scoreColor(score)}`}>{pct}%</span>
       </div>
     );
+  };
+
+  const analyzeTeam = async (teamId: string) => {
+    setAnalyzingTeam(teamId);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/teams/${teamId}/analyze`, { method: 'POST' });
+      if (!res.ok) throw new Error('Analysis failed');
+      const data = await res.json();
+      setAnalysisResults(prev => ({ ...prev, [teamId]: data.analysis }));
+    } catch {
+      setAnalysisResults(prev => ({ ...prev, [teamId]: 'Error: Could not complete analysis. Check that the AI key is configured.' }));
+    } finally {
+      setAnalyzingTeam(null);
+    }
+  };
+
+  const renderAnalysis = (text: string) => {
+    const sections = text.split(/\n(?=## )/);
+    return sections.map((section, i) => {
+      const lines = section.trim().split('\n');
+      const header = lines[0].replace(/^## /, '');
+      const body = lines.slice(1).join('\n').trim();
+      return (
+        <div key={i} className="mb-4 last:mb-0">
+          <p className="text-xs font-mono text-purple-600 uppercase tracking-widest mb-1">{header}</p>
+          <p className="text-sm text-stone-700 whitespace-pre-line">{body}</p>
+        </div>
+      );
+    });
   };
 
   return (
@@ -324,6 +355,34 @@ export default function TeamsPage() {
                           )}
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {/* AI Analysis */}
+                  {role === 'instructor' && (
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-xs font-mono text-stone-400 uppercase tracking-widest">AI Team Health</p>
+                        <button
+                          onClick={() => analyzeTeam(team.id)}
+                          disabled={analyzingTeam === team.id}
+                          className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 disabled:bg-purple-300 text-white text-xs font-semibold rounded-lg transition"
+                        >
+                          {analyzingTeam === team.id ? (
+                            <>
+                              <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                              Analyzing...
+                            </>
+                          ) : (
+                            'Analyze Team Health'
+                          )}
+                        </button>
+                      </div>
+                      {analysisResults[team.id] && (
+                        <div className="bg-purple-50 border border-purple-100 rounded-lg p-4">
+                          {renderAnalysis(analysisResults[team.id])}
+                        </div>
+                      )}
                     </div>
                   )}
 
