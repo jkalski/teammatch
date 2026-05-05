@@ -262,7 +262,7 @@ export default function AnalyticsPage() {
                         <YAxis tick={{ fontSize: 11, fill: '#78716c' }} unit="h" width={32} />
                         <Tooltip
                           contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid #e7e5e4' }}
-                          formatter={(value: number | string, name: string) => [`${value}h`, name]}
+                          formatter={(value, name) => [`${value ?? ''}h`, String(name)]}
                         />
                         {teamData.students.map(s => (
                           <Line
