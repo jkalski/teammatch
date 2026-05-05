@@ -156,16 +156,39 @@ export default function TeamsPage() {
     }
   };
 
+  const formatInline = (line: string) => {
+    const parts = line.split(/\*\*(.*?)\*\*/g);
+    return parts.map((part, j) =>
+      j % 2 === 1
+        ? <strong key={j} className="font-semibold text-stone-800">{part}</strong>
+        : part
+    );
+  };
+
   const renderAnalysis = (text: string) => {
     const sections = text.split(/\n(?=## )/);
     return sections.map((section, i) => {
       const lines = section.trim().split('\n');
       const header = lines[0].replace(/^## /, '');
-      const body = lines.slice(1).join('\n').trim();
+      const bodyLines = lines.slice(1).filter(l => l.trim());
       return (
         <div key={i} className="mb-4 last:mb-0">
-          <p className="text-xs font-mono text-purple-600 uppercase tracking-widest mb-1">{header}</p>
-          <p className="text-sm text-stone-700 whitespace-pre-line">{body}</p>
+          <p className="text-xs font-mono text-purple-600 uppercase tracking-widest mb-2">{header}</p>
+          <div className="space-y-1.5">
+            {bodyLines.map((line, j) => {
+              const isBullet = /^[-*]\s/.test(line) || /^\d+\.\s/.test(line);
+              const cleaned = line.replace(/^[-*]\s+/, '').replace(/^\d+\.\s+/, '');
+              if (isBullet) {
+                return (
+                  <div key={j} className="flex gap-2 items-start">
+                    <span className="text-purple-400 flex-shrink-0 mt-0.5">•</span>
+                    <p className="text-sm text-stone-700">{formatInline(cleaned)}</p>
+                  </div>
+                );
+              }
+              return <p key={j} className="text-sm text-stone-700">{formatInline(line)}</p>;
+            })}
+          </div>
         </div>
       );
     });
