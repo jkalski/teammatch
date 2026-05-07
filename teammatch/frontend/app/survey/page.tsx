@@ -9,7 +9,7 @@ export default function SurveyPage() {
   const [form, setForm] = useState({
     name: '',
     email: '',
-    course_id: '',
+    team_code: '',
     experience_level: '',
     leadership_preference: '',
     role_preference: '',
@@ -47,10 +47,17 @@ export default function SurveyPage() {
     setLoading(true);
     setError('');
     try {
+      const courseRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/code/${form.team_code.trim().toUpperCase()}`);
+      if (!courseRes.ok) {
+        setError('Invalid join code. Check with your instructor and try again.');
+        return;
+      }
+      const course = await courseRes.json();
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/students/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, course_id: course.id }),
       });
       if (!res.ok) throw new Error('Submission failed');
       const data = await res.json();
@@ -92,6 +99,10 @@ export default function SurveyPage() {
     <div className="min-h-screen bg-stone-50 py-12 px-4">
       <div className="max-w-2xl mx-auto">
 
+        <a href="/" className="inline-flex items-center gap-1 text-sm text-stone-400 hover:text-stone-600 transition mb-8">
+          ← Back
+        </a>
+
         {/* Header */}
         <div className="mb-10">
           <div className="text-xs font-mono text-emerald-600 tracking-widest uppercase mb-3">TeamMatch</div>
@@ -118,10 +129,11 @@ export default function SurveyPage() {
               onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
             />
             <input
-              className="w-full bg-white border border-stone-200 rounded-lg px-4 py-3 text-stone-800 placeholder-stone-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition"
-              placeholder="Course ID (provided by your instructor)"
-              value={form.course_id}
-              onChange={e => setForm(p => ({ ...p, course_id: e.target.value }))}
+              className="w-full bg-white border border-stone-200 rounded-lg px-4 py-3 text-stone-800 placeholder-stone-400 focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition font-mono tracking-widest uppercase"
+              placeholder="Course join code (e.g. 6E1C7863)"
+              value={form.team_code}
+              onChange={e => setForm(p => ({ ...p, team_code: e.target.value.toUpperCase() }))}
+              maxLength={8}
             />
           </div>
 

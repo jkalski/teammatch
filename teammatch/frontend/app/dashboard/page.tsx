@@ -87,6 +87,7 @@ export default function DashboardPage() {
   const [newCourse, setNewCourse] = useState({ name: '', instructor_id: 'instructor-001', team_size: 4 });
   const [loading, setLoading] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [confirmReMatch, setConfirmReMatch] = useState(false);
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('tm_pinned_courses') || '[]'); } catch { return []; }
   });
@@ -107,6 +108,7 @@ export default function DashboardPage() {
     if (selectedCourse) {
       fetchStudents(selectedCourse.id);
       fetchMatchRuns(selectedCourse.id);
+      setConfirmReMatch(false);
     }
   }, [selectedCourse]);
 
@@ -154,6 +156,7 @@ export default function DashboardPage() {
 
   const triggerMatchRun = async () => {
     if (!selectedCourse) return;
+    setConfirmReMatch(false);
     setLoading(true);
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/matchruns/`, {
       method: 'POST',
@@ -163,6 +166,15 @@ export default function DashboardPage() {
     const data = await res.json();
     setMatchRuns(prev => [data, ...prev]);
     setLoading(false);
+  };
+
+  const handleRunMatchClick = () => {
+    const hasCompletedRun = matchRuns.some(r => r.status === 'COMPLETED');
+    if (hasCompletedRun) {
+      setConfirmReMatch(true);
+    } else {
+      triggerMatchRun();
+    }
   };
 
   const deleteCourse = async (courseId: string) => {
@@ -347,13 +359,35 @@ export default function DashboardPage() {
                   <div className="flex justify-between items-center">
                     <p className="text-sm text-stone-500">{students.length} students ready for matching</p>
                     <button
-                      onClick={triggerMatchRun}
+                      onClick={handleRunMatchClick}
                       disabled={loading || students.length === 0}
                       className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-400 disabled:bg-stone-200 disabled:text-stone-400 text-white text-sm font-medium rounded-lg transition"
                     >
                       {loading ? 'Running...' : '▶ Run Match'}
                     </button>
                   </div>
+
+                  {confirmReMatch && (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                      <p className="text-sm text-amber-800 font-medium mb-1">This class already has teams assigned.</p>
+                      <p className="text-sm text-amber-700 mb-4">Running a new match will reassign all students into new teams. Check-in history is preserved, but the current team groupings will be replaced.</p>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={triggerMatchRun}
+                          disabled={loading}
+                          className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-white text-sm font-medium rounded-lg transition"
+                        >
+                          Yes, re-run matching
+                        </button>
+                        <button
+                          onClick={() => setConfirmReMatch(false)}
+                          className="px-4 py-2 border border-stone-200 text-stone-600 text-sm rounded-lg hover:bg-stone-50 transition"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   <div className="bg-white rounded-xl border border-stone-200 overflow-hidden">
                     {matchRuns.length === 0 ? (
                       <div className="p-8 text-center text-stone-400">No match runs yet. Click "Run Match" to generate teams.</div>

@@ -4,6 +4,7 @@ from app.core.database import get_db
 from app.models.team import Team
 from app.models.student import Student
 from app.models.checkin import CheckIn
+from app.models.matchrun import MatchRun
 from app.schemas.team import TeamResponse
 import os
 import anthropic
@@ -12,6 +13,14 @@ router = APIRouter(prefix="/teams", tags=["teams"])
 
 @router.get("/course/{course_id}", response_model=list[TeamResponse])
 def get_teams_by_course(course_id: str, db: Session = Depends(get_db)):
+    latest_run = (
+        db.query(MatchRun)
+        .filter(MatchRun.course_id == course_id, MatchRun.status == "COMPLETED")
+        .order_by(MatchRun.completed_at.desc())
+        .first()
+    )
+    if latest_run:
+        return db.query(Team).filter(Team.match_run_id == latest_run.id).all()
     return db.query(Team).filter(Team.course_id == course_id).all()
 
 @router.get("/matchrun/{match_run_id}", response_model=list[TeamResponse])

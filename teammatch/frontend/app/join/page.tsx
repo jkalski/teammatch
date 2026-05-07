@@ -26,15 +26,21 @@ export default function JoinPage() {
 
     setLoading(true);
     try {
-      // Look up student and verify they exist
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/students/${form.student_id}`);
-      if (!res.ok) {
-        setError('Student ID not found. Please submit your profile first.');
+      const courseRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/courses/code/${form.team_code.trim().toUpperCase()}`);
+      if (!courseRes.ok) {
+        setError('Invalid join code. Check with your instructor and try again.');
         return;
       }
+
+      const studentRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/students/${form.student_id}`);
+      if (!studentRes.ok) {
+        setError('Student ID not found. Please submit your survey first.');
+        return;
+      }
+
       setJoined(true);
     } catch (e) {
-      setError('Could not reach the server. Make sure the backend is running.');
+      setError('Could not reach the server. Try again.');
     } finally {
       setLoading(false);
     }
@@ -49,7 +55,10 @@ export default function JoinPage() {
           </div>
           <h2 className="text-3xl font-bold text-stone-800 mb-2">You've joined!</h2>
           <p className="text-stone-500 mb-2">Team code: <span className="font-mono font-bold text-emerald-600">{form.team_code}</span></p>
-          <p className="text-stone-400 text-sm">Your instructor will finalize teams soon. Check back for your assignment.</p>
+          <p className="text-stone-400 text-sm mb-6">Your instructor will finalize teams soon. Check back for your assignment.</p>
+          <a href="/checkin" className="inline-block px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold rounded-lg transition text-sm">
+            Go to Check-in →
+          </a>
         </div>
       </div>
     );

@@ -32,6 +32,13 @@ def create_course(course: CourseCreate, db: Session = Depends(get_db)):
 def get_courses(db: Session = Depends(get_db)):
     return db.query(Course).all()
 
+@router.get("/code/{team_code}", response_model=CourseResponse)
+def get_course_by_code(team_code: str, db: Session = Depends(get_db)):
+    course = db.query(Course).filter(Course.team_code == team_code.upper()).first()
+    if not course:
+        raise HTTPException(status_code=404, detail="Invalid join code")
+    return course
+
 @router.get("/{course_id}", response_model=CourseResponse)
 def get_course(course_id: str, db: Session = Depends(get_db)):
     course = db.query(Course).filter(Course.id == course_id).first()

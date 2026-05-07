@@ -3,6 +3,7 @@ from sqlalchemy.sql import func
 from app.models.student import Student
 from app.models.team import Team
 from app.models.matchrun import MatchRun
+from app.models.project import Project
 import uuid
 import random
 from itertools import combinations
@@ -147,12 +148,11 @@ def run_matching(run_id: str, course_id: str, team_size: int, _db: Session):
             )
             new_teams.append((team, members))
 
-        # All preparation succeeded — now do destructive writes in one transaction
+        # Null out existing team assignments — don't delete old teams since
+        # checkins.team_id is NOT NULL and preserving history matters.
         for s in students:
             s.team_id = None
-        old_teams = db.query(Team).filter(Team.course_id == course_id).all()
-        for t in old_teams:
-            db.delete(t)
+        db.query(Project).filter(Project.course_id == course_id).update({"team_id": None})
         db.flush()
 
         for team, members in new_teams:
