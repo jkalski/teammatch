@@ -1,5 +1,11 @@
 # TeamMatch
 
+## Final Presentation
+
+**[Final Presentation & Video](./final%20presentation/)** — The final presentation slides and demo video are located in this folder.
+
+---
+
 TeamMatch is a cloud-native web application that forms balanced, schedule-compatible project teams for computer science courses. It collects student skills and availability, then uses a deterministic optimization engine to generate fair, explainable team assignments for instructors.
 
 ## Tech Stack
