@@ -1,0 +1,330 @@
+================================================================================
+                        TEAMMATCH - FULL PROJECT DOCUMENTATION
+================================================================================
+
+PROJECT OVERVIEW
+----------------
+TeamMatch is a cloud-native web application built for computer science instructors
+to automatically form balanced, schedule-compatible project teams from student
+rosters. The system collects detailed student skills, availability, and
+preferences, then uses a deterministic optimization engine to generate fair,
+explainable team assignments. Beyond initial matching, it supports ongoing team
+collaboration through weekly check-ins, progress tracking, project milestones,
+and AI-powered team health analysis.
+
+
+================================================================================
+TECH STACK
+================================================================================
+
+Frontend:
+  - Next.js (TypeScript, React)
+  - Tailwind CSS for styling
+  - Recharts for data visualization
+  - Deployed to: Azure Static Web Apps
+
+Backend:
+  - FastAPI (Python)
+  - SQLAlchemy ORM + Alembic for migrations
+  - Anthropic Claude API for AI team health analysis
+  - Deployed to: Azure App Service
+
+Database:
+  - PostgreSQL (Azure Database for PostgreSQL)
+
+Infrastructure & CI/CD:
+  - Azure App Service (backend)
+  - Azure Static Web Apps (frontend)
+  - Azure Container Instances (matching agent)
+  - Azure Service Bus (job queue)
+  - GitHub Actions for automated build and deployment
+
+
+================================================================================
+REPOSITORY STRUCTURE
+================================================================================
+
+/teammatch
+  /frontend          - Next.js web application (TypeScript)
+  /backend           - FastAPI REST API (Python)
+  /agent             - Matching engine and optimization logic
+  /infra             - Azure infrastructure configuration
+  /docs              - Architecture and deployment documentation
+  /.github/workflows - CI/CD pipelines
+/project documents   - All course assignment PDFs and diagrams
+/final presentation  - Final presentation slides and demo video
+
+
+================================================================================
+DATABASE SCHEMA
+================================================================================
+
+courses
+  - id (UUID, PK)
+  - name, instructor_id
+  - team_size (default: 4)
+  - team_code (unique, 8-char code for students to join)
+  - created_at, updated_at
+
+students
+  - id (UUID, PK)
+  - email (unique), name
+  - course_id (FK → courses)
+  - team_id (FK → teams, nullable)
+  - skills[] (array), experience_level
+  - availability[], leadership_preference, role_preference
+  - created_at, updated_at
+
+teams
+  - id (UUID, PK)
+  - course_id (FK → courses)
+  - match_run_id (FK → matchruns)
+  - name, team_code (unique)
+  - skill_balance_score, experience_balance_score
+  - schedule_overlap_score, overall_score
+  - explanation (human-readable team formation rationale)
+
+matchruns
+  - id (UUID, PK)
+  - course_id (FK → courses)
+  - status: PENDING → RUNNING → COMPLETED / FAILED
+  - roster_snapshot_id, constraints_snapshot
+  - total_teams, error_reason
+  - started_at, completed_at, created_at
+
+checkins
+  - id (UUID, PK)
+  - student_id (FK → students)
+  - team_id (FK → teams)
+  - course_id (FK → courses)
+  - hours_worked, tasks_planned, tasks_completed
+  - what_i_worked_on, next_week_plan
+  - completion_status: on_track / behind / blocked / ahead
+  - contribution_type: coding / design / research / testing / devops
+  - confidence_level (1–5)
+  - blocked_by, needs_help (bool), blockers
+  - evidence_url, peer_shoutout, week_number
+  - is_edited, edited_at, created_at
+
+projects
+  - id, course_id, team_id (nullable)
+  - name, description, deadline, status
+
+milestones
+  - id, project_id
+  - title, description, due_date, completed (bool)
+
+notifications
+  - id, student_id, course_id, instructor_id
+  - type, message, flag_reason, is_read
+
+
+================================================================================
+MATCHING ENGINE & ALGORITHM
+================================================================================
+
+Location: teammatch/backend/app/core/matching.py
+
+How it works:
+  1. Team Formation
+     - Seeds each team with one leader or flexible student
+     - Greedily fills remaining slots, prioritizing students who add new
+       skills not already represented on the team
+     - Balances team sizes within the configured team_size parameter
+
+  2. Scoring System (per team)
+     - Skill Balance      (40% weight): ratio of unique skills to total skills
+     - Experience Balance (35% weight): spread across beginner / intermediate / advanced
+     - Schedule Overlap   (25% weight): pairwise availability intersection ratios
+     - Overall Score = 0.4 * skill + 0.35 * experience + 0.25 * schedule
+
+  3. Explanation Generator
+     - Produces a human-readable summary for each team
+     - Lists covered skills, experience mix, and schedule overlap percentage
+
+  4. Execution
+     - Runs asynchronously as a background task
+     - Snapshots the student roster at match time
+     - Creates new Team records in the database
+     - Preserves old teams so historical check-in data remains intact
+     - Atomic transactions with rollback on error
+     - Auto-recovers stuck PENDING/RUNNING runs on server startup
+
+
+================================================================================
+API ROUTES (FastAPI)
+================================================================================
+
+Courses  (/courses)
+  POST   /                      Create a new course
+  GET    /                      List all courses
+  GET    /code/{team_code}      Look up course by join code
+  GET    /{course_id}           Get course details
+  DELETE /{course_id}           Delete course (cascading)
+
+Students  (/students)
+  POST   /                      Create / enroll a student
+  GET    /course/{course_id}    List students in a course
+  GET    /{student_id}          Get student details
+
+Match Runs  (/matchruns)
+  POST   /                      Trigger the matching algorithm (background task)
+  GET    /{run_id}              Get match run status
+  GET    /course/{course_id}    List all match runs for a course
+
+Teams  (/teams)
+  GET    /course/{course_id}           Teams from latest match run
+  GET    /matchrun/{match_run_id}      Teams from a specific run
+  GET    /{team_id}                    Get team details
+  POST   /{team_id}/analyze            AI-powered team health analysis
+
+Check-ins  (/checkins)
+  POST   /                      Submit a weekly check-in
+  GET    /student/{student_id}  Student's check-in history
+  GET    /team/{team_id}        Team's check-in history (newest first)
+  GET    /course/{course_id}    Course-wide check-in history
+
+Analytics  (/analytics)
+  GET    /course/{course_id}    Aggregated team and student analytics
+
+Projects  (/projects)
+  POST   /                         Create a project
+  GET    /course/{course_id}       Get course projects
+  GET    /team/{team_id}           Get team projects
+  PATCH  /{project_id}/assign      Assign project to a team
+  POST   /{project_id}/milestones  Add a milestone
+
+Notifications  (/notifications)
+  POST   /                          Create a notification
+  GET    /student/{student_id}      Get student notifications
+  PATCH  /{notification_id}/read    Mark notification as read
+
+
+================================================================================
+FRONTEND PAGES
+================================================================================
+
+Public
+  /          Hero landing page with animated team formation visualization
+  /login     Role-based login (Instructor or Student)
+
+Student Pages
+  /survey    Skills, availability, experience, and role preference survey
+  /join      Join a team using an instructor-provided team code
+  /checkin   Submit a weekly progress check-in
+  /checkins  View personal check-in history
+
+Instructor Pages
+  /dashboard   Course management (create, pin, delete courses)
+  /teams       View team compositions, scores, and member details
+  /projects    Manage projects, assign to teams, track milestones
+  /analytics   Course analytics, at-risk student flags, AI health reports
+  /history     Match run history and results
+
+
+================================================================================
+AI INTEGRATION
+================================================================================
+
+Team Health Analysis uses the Anthropic Claude API:
+  - Sends team composition, member skills, and check-in history to Claude
+  - Returns a structured analysis including:
+      * Overall team health summary
+      * At-risk student identification
+      * Recommended instructor action items
+      * Week-by-week improvement suggestions
+  - Triggered per-team from the /teams page or via POST /{team_id}/analyze
+
+
+================================================================================
+ENVIRONMENT CONFIGURATION
+================================================================================
+
+Backend (.env):
+  DATABASE_URL      postgresql connection string (Azure PostgreSQL)
+  POSTGRES_HOST     Azure database host
+  POSTGRES_USER     Database username
+  POSTGRES_PASSWORD Database password
+  POSTGRES_PORT     5432
+  POSTGRES_DB       Database name
+  ANTHROPIC_API_KEY API key for Claude AI integration
+
+Frontend (.env.local):
+  NEXT_PUBLIC_API_URL   https://teammatch-api-eqaaaxgtfffwdhcj.canadacentral-01.azurewebsites.net
+
+
+================================================================================
+CI/CD PIPELINE (GitHub Actions → Azure)
+================================================================================
+
+Trigger: push to main branch
+Steps:
+  1. Set up Python 3.12 environment
+  2. Install dependencies from requirements.txt
+  3. Build and upload deployment artifact
+  4. Deploy to Azure App Service using service principal credentials
+     (client-id, tenant-id, subscription-id stored as GitHub Secrets)
+
+
+================================================================================
+KEY DESIGN DECISIONS
+================================================================================
+
+1. Deterministic Matching
+   Uses a greedy algorithm for reproducibility and explainability, making it
+   easy for instructors to understand and justify team assignments.
+
+2. Async Processing with Recovery
+   Match runs execute as background tasks with status polling. On server
+   restart, stuck PENDING or RUNNING jobs are automatically recovered.
+
+3. Team Immutability After Re-matching
+   Old teams are preserved when a new match run is triggered, so all
+   historical check-in data remains valid and accessible.
+
+4. AI for Qualitative Insights
+   The matching algorithm handles objective scoring; Claude handles
+   subjective, contextual interpretation of team health and student risk.
+
+5. Local Storage Authentication
+   Role and identity management via local storage keeps the system simple
+   for a course context without requiring full OAuth infrastructure.
+
+6. Cloud-Native Azure Architecture
+   Managed services (PostgreSQL, App Service, Static Web Apps) reduce
+   operational overhead while providing production-grade reliability.
+
+
+================================================================================
+PROJECT DOCUMENTS INCLUDED
+================================================================================
+
+/project documents/
+  - PRD - Teammatch.pdf
+  - Functional Requirements Document.pdf
+  - Application Design.pdf
+  - Architecture design - Teammatch.pdf
+  - Database Design for TeamMatch.pdf
+  - Module, UI Design & AI Integration.pdf
+  - TeamMatch_API_Design.docx
+  - TeamMatch_API_Design_System_Workflow.docx
+  - TeamMatch_API_Testing_Guide.pdf
+  - Group_API_Testing.pdf
+  - Ethical, Legal, and Security Considerations document.pdf
+  - api design and system workflow.pdf
+  - diagrams/System Architecture - team map.pdf
+
+/final presentation/
+  - TeammatchFinalPresentation.pdf
+  - Final demo video: https://www.youtube.com/watch?v=Ep7QwfX0wC0
+
+
+================================================================================
+TEAM & COURSE INFO
+================================================================================
+
+Course:    Computer Science Senior Project
+University: California State University, Northridge (CSUN)
+Contact:   justin.kalski.134@my.csun.edu
+
+================================================================================
