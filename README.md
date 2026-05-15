@@ -6,6 +6,8 @@
 
 ## [Click Here to Watch on YouTube](https://www.youtube.com/watch?v=Ep7QwfX0wC0)
 
+## [Full Project Documentation](./project%20documents/TeamMatch_Project_Documentation.txt)
+
 ---
 
 TeamMatch is a cloud-native web application that forms balanced, schedule-compatible project teams for computer science courses. It collects student skills and availability, then uses a deterministic optimization engine to generate fair, explainable team assignments for instructors.
